@@ -141,11 +141,11 @@ class _ChatbotState extends State<Chatbot> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
-        if (responseData.containsKey("candidates") &&
-            responseData["candidates"].isNotEmpty) {
-          final botReply =
-              responseData["candidates"][0]["content"]["parts"][0]["text"] ??
-                  "I'm here to support you.";
+         if (responseData.containsKey("candidates") && responseData["candidates"].isNotEmpty) {
+          String botReply = responseData["candidates"][0]["content"]["parts"][0]["text"] ?? "I'm here to support you.";
+
+          // Sanitize the bot's response
+          botReply = _sanitizeResponse(botReply);
 
           setState(() {
             _messages.add({"role": "bot", "text": botReply});
@@ -307,6 +307,11 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
       _speech.stop();
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
     }
+  }
+  //remove **
+  String _sanitizeResponse(String text) {
+    // Remove '**' and any other unwanted patterns
+    return text.replaceAll('**', '');
   }
 
   @override
