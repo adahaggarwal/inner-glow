@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget{
                 onTap: (){
                   Navigator.push(context, MaterialPageRoute(builder: (context)=>Chatbot()));
                 },
-                child: Features(title: "Inner Echo", 
+                child: Features(title: "Lumora", 
                 description: "Your emotions, your voice—reflected back to you.", 
                 imagePath: "lib/assets/images/innerecho.png",
                 ),
@@ -82,22 +82,40 @@ class HomeScreen extends StatelessWidget{
                   Navigator.push(context, MaterialPageRoute(builder: (context)=>SleepCrisisScreen()));
                 },
                 child: Features2(title: "Deep Rest", 
-                description: "Your emotions, your voice—reflected back to you.", 
+                description: "Instant support for nightime anxiety and insomnia.🌙", 
                 imagePath: "lib/assets/images/deeprest.png",
                 ),
               ),
               SizedBox(height: 20,),
 
-              Features(title: "Inner Echo", 
-              description: "Your emotions, your voice—reflected back to you.", 
-              imagePath: "lib/assets/images/innerecho.png",
+              Features(title: "Self-Care tasks", 
+              description: "Small, actionable self-care tasks with rewards.🎯 ", 
+              imagePath: "lib/assets/images/selfcare.png",
               ),
               SizedBox(height: 20,),
 
-              Features2(title: "Inner Echo", 
-              description: "Your emotions, your voice—reflected back to you.", 
-              imagePath: "lib/assets/images/innerecho.png",
-              )
+              Features2(title: "Bloom Buddy", 
+              description: "Complete your self-care tasks and nurture your plant as it flourishes with you. 🌱", 
+              imagePath: "lib/assets/images/bloombuddy.png",
+              ),
+              SizedBox(height: 20,),
+
+              Features(title: "Safe Haven", 
+              description: "A customizable virtual relaxation room.🏡 ", 
+              imagePath: "lib/assets/images/safe.png",
+              ),
+              SizedBox(height: 20,),
+
+              Features2(title: "Time Capsule", 
+              description: "Write letters to themselves, delivered later for self-reflection.📜", 
+              imagePath: "lib/assets/images/tiny.png",
+              ),
+              SizedBox(height: 20,),
+
+              Features(title: "Inner Track", 
+              description: "Track progress and mood trends. 📊", 
+              imagePath: "lib/assets/images/inner.png",
+              ),
               
               
             ],

@@ -33,7 +33,7 @@ class Features2 extends StatelessWidget {
           SizedBox(width: 10,),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Headtext(
                   text: title,
