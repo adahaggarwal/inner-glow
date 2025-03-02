@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:innerglow/constants/colors.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:confetti/confetti.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class SelfCareTasksScreen extends StatefulWidget {
   @override
@@ -11,15 +12,16 @@ class SelfCareTasksScreen extends StatefulWidget {
 
 class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   late ConfettiController _confettiController;
+  late ConfettiController _journeyCompletedController;
   CalendarFormat _calendarFormat = CalendarFormat.week;
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   
   // Track task completion status
-  Map<DateTime, bool> _completedTasks = {};
+  Map<String, bool> _completedTasks = {};
   
   // Track missed tasks
-  Map<DateTime, bool> _missedTasks = {};
+  Map<String, bool> _missedTasks = {};
   
   // Current task details
   String currentTaskTitle = "Take 5 deep breaths";
@@ -30,6 +32,8 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   double progressValue = 0.0;
   int stepsCompleted = 0;
   int totalSteps = 25;
+  int journeyCount = 1;
+  bool showJourneyCompletedDialog = false;
   
   // Primary color from hex code 863668
   final Color primaryColor = Color(0xFF863668);
@@ -80,7 +84,64 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: Duration(seconds: 2));
+    _journeyCompletedController = ConfettiController(duration: Duration(seconds: 5));
+    _loadSavedData();
+  }
+
+  // Format date to string for use as map key
+  String _formatDateKey(DateTime date) {
+    return "${date.year}-${date.month}-${date.day}";
+  }
+
+  // Load saved data from SharedPreferences
+  Future<void> _loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    setState(() {
+      // Load completed tasks
+      final completedTasksJson = prefs.getString('completedTasks');
+      if (completedTasksJson != null) {
+        _completedTasks = Map<String, bool>.from(jsonDecode(completedTasksJson));
+      }
+      
+      // Load missed tasks
+      final missedTasksJson = prefs.getString('missedTasks');
+      if (missedTasksJson != null) {
+        _missedTasks = Map<String, bool>.from(jsonDecode(missedTasksJson));
+      }
+      
+      // Load progress
+      stepsCompleted = prefs.getInt('stepsCompleted') ?? 0;
+      journeyCount = prefs.getInt('journeyCount') ?? 1;
+      progressValue = stepsCompleted / totalSteps;
+      
+      // Load current task
+      currentTaskTitle = prefs.getString('currentTaskTitle') ?? currentTaskTitle;
+      currentTaskCategory = prefs.getString('currentTaskCategory') ?? currentTaskCategory;
+      currentTaskDescription = prefs.getString('currentTaskDescription') ?? currentTaskDescription;
+    });
+    
     _initializeMissedTasks();
+  }
+
+  // Save data to SharedPreferences
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Save completed tasks
+    await prefs.setString('completedTasks', jsonEncode(_completedTasks));
+    
+    // Save missed tasks
+    await prefs.setString('missedTasks', jsonEncode(_missedTasks));
+    
+    // Save progress
+    await prefs.setInt('stepsCompleted', stepsCompleted);
+    await prefs.setInt('journeyCount', journeyCount);
+    
+    // Save current task
+    await prefs.setString('currentTaskTitle', currentTaskTitle);
+    await prefs.setString('currentTaskCategory', currentTaskCategory);
+    await prefs.setString('currentTaskDescription', currentTaskDescription);
   }
 
   // Initialize missed tasks for past days
@@ -90,23 +151,55 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
     // Check for the last 30 days
     for (int i = 1; i <= 30; i++) {
       final day = DateTime(today.year, today.month, today.day).subtract(Duration(days: i));
-      final dayKey = DateTime(day.year, day.month, day.day);
+      final dayKey = _formatDateKey(day);
       
       // If there's no completed task for that day, mark it as missed
       if (_completedTasks[dayKey] == null) {
         _missedTasks[dayKey] = true;
       }
     }
+    
+    // Save the updated missed tasks
+    _saveData();
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
+    _journeyCompletedController.dispose();
     super.dispose();
   }
 
+  void _startNewJourney() {
+    setState(() {
+      // Reset steps but keep history
+      stepsCompleted = 0;
+      progressValue = 0.0;
+      journeyCount++;
+      showJourneyCompletedDialog = false;
+      
+      // Assign a new task
+      _assignNewTask();
+    });
+    
+    // Save the updated data
+    _saveData();
+  }
+
+  void _assignNewTask() {
+    // Assign next task - pick a random category and task
+    final categories = taskCategories.keys.toList();
+    final randomCategory = categories[DateTime.now().millisecond % categories.length];
+    final tasks = taskCategories[randomCategory]!;
+    final randomTask = tasks[DateTime.now().second % tasks.length];
+    
+    currentTaskTitle = randomTask;
+    currentTaskCategory = randomCategory;
+    currentTaskDescription = "Complete this simple self-care activity to advance on your journey.";
+  }
+
   void _markTaskComplete() {
-    final today = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+    final today = _formatDateKey(_selectedDay);
     
     setState(() {
       _completedTasks[today] = true;
@@ -118,38 +211,37 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
       stepsCompleted++;
       progressValue = stepsCompleted / totalSteps;
       
-      // Assign next task - pick a random category and task
-      final categories = taskCategories.keys.toList();
-      final randomCategory = categories[DateTime.now().millisecond % categories.length];
-      final tasks = taskCategories[randomCategory]!;
-      final randomTask = tasks[DateTime.now().second % tasks.length];
-      
-      currentTaskTitle = randomTask;
-      currentTaskCategory = randomCategory;
-      currentTaskDescription = "Complete this simple self-care activity to advance on your journey.";
+      // Check if journey is completed
+      if (stepsCompleted >= totalSteps) {
+        // Show journey completed dialog
+        showJourneyCompletedDialog = true;
+        _journeyCompletedController.play();
+      } else {
+        // Assign next task
+        _assignNewTask();
+      }
     });
+    
+    // Save the updated data
+    _saveData();
     
     // Show confetti effect
     _confettiController.play();
   }
 
   void _skipTask() {
-    final today = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+    final today = _formatDateKey(_selectedDay);
     
     setState(() {
       // Mark as missed
       _missedTasks[today] = true;
       
       // Assign next task
-      final categories = taskCategories.keys.toList();
-      final randomCategory = categories[DateTime.now().millisecond % categories.length];
-      final tasks = taskCategories[randomCategory]!;
-      final randomTask = tasks[DateTime.now().second % tasks.length];
-      
-      currentTaskTitle = randomTask;
-      currentTaskCategory = randomCategory;
-      currentTaskDescription = "Complete this simple self-care activity to advance on your journey.";
+      _assignNewTask();
     });
+    
+    // Save the updated data
+    _saveData();
   }
 
   @override
@@ -160,7 +252,7 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          "Self-Care Journey",
+          "Self-Care Journey ${journeyCount > 1 ? '- #$journeyCount' : ''}",
           style: TextStyle(
             color: primaryColor,
             fontWeight: FontWeight.bold,
@@ -210,7 +302,7 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             ),
           ),
           
-          // Confetti overlay
+          // Confetti overlay for task completion
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -222,15 +314,121 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
               numberOfParticles: 20,
               gravity: 0.1,
               colors: [
-                primaryColor,
-                primaryColor.withOpacity(0.7),
-                primaryColor.withOpacity(0.5),
-                Colors.white,
+                Colors.red,
+                Colors.green,
+                Colors.yellow,
+                Colors.blue,
+                Colors.pink,
+                Colors.purple,
               ],
             ),
           ),
+          
+          // Journey completed overlay
+          if (showJourneyCompletedDialog)
+            _buildJourneyCompletedOverlay(),
         ],
       ),
+    );
+  }
+
+  Widget _buildJourneyCompletedOverlay() {
+    return Stack(
+      children: [
+        // Semi-transparent backdrop
+        Container(
+          color: Colors.black.withOpacity(0.7),
+          width: double.infinity,
+          height: double.infinity,
+        ),
+        
+        // Confetti
+        Align(
+          alignment: Alignment.center,
+          child: ConfettiWidget(
+            confettiController: _journeyCompletedController,
+            blastDirectionality: BlastDirectionality.explosive,
+            maxBlastForce: 7,
+            minBlastForce: 3,
+            emissionFrequency: 0.05,
+            numberOfParticles: 50,
+            gravity: 0.1,
+            colors: [
+              Colors.red,
+              Colors.green,
+              Colors.yellow,
+              Colors.blue,
+              Colors.pink,
+              Colors.purple,
+              Colors.orange,
+              Colors.teal,
+            ],
+          ),
+        ),
+        
+        // Congratulations dialog
+        Center(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 15,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.celebration,
+                  color: primaryColor,
+                  size: 60,
+                ),
+                SizedBox(height: 20),
+                Text(
+                  "Congratulations!",
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
+                ),
+                SizedBox(height: 15),
+                Text(
+                  "You've completed your 25-day self-care journey! Taking small steps each day has made a significant impact on your wellbeing.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                SizedBox(height: 25),
+                ElevatedButton(
+                  onPressed: _startNewJourney,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                  ),
+                  child: Text(
+                    "Start New Journey",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -270,7 +468,9 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
               SizedBox(width: 15),
               Expanded(
                 child: Text(
-                  "Welcome to your Self-Care Journey!",
+                  journeyCount > 1 
+                    ? "Welcome to Journey #$journeyCount!" 
+                    : "Welcome to your Self-Care Journey!",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -359,7 +559,7 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             },
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, date, events) {
-                final dateKey = DateTime(date.year, date.month, date.day);
+                final dateKey = _formatDateKey(date);
                 final completed = _completedTasks[dateKey] ?? false;
                 final missed = _missedTasks[dateKey] ?? false;
                 
@@ -377,7 +577,7 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
               },
               // Customize day cells
               defaultBuilder: (context, day, focusedDay) {
-                final dateKey = DateTime(day.year, day.month, day.day);
+                final dateKey = _formatDateKey(day);
                 final completed = _completedTasks[dateKey] ?? false;
                 final missed = _missedTasks[dateKey] ?? false;
                 
@@ -481,13 +681,27 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Your Progress",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Your Progress",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              if (journeyCount > 1)
+                Text(
+                  "Journey #$journeyCount",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: primaryColor.withOpacity(0.7),
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 15),
           LinearPercentIndicator(
