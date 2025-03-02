@@ -180,7 +180,7 @@ class PlantWidget extends StatelessWidget {
   const PlantWidget({
     Key? key,
     required this.completedTasks,
-    this.size = 250,
+    this.size = 350,
   }) : super(key: key);
 
   @override

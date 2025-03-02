@@ -4,6 +4,7 @@ import 'package:innerglow/screens/bloombuddy.dart';
 import 'package:innerglow/screens/chatbot/chatbot.dart';
 import 'package:innerglow/screens/self_care_tasks_screen.dart';
 import 'package:innerglow/screens/sleep_crisis_mode.dart';
+import 'package:innerglow/screens/time_capsule.dart';
 import 'package:innerglow/widgets/features.dart';
 import 'package:innerglow/widgets/features2.dart';
 import 'package:innerglow/widgets/head_text.dart';
@@ -229,10 +230,15 @@ class HomeScreen extends StatelessWidget {
               
               SizedBox(height: 15),
               
-              Features2(
-                title: "Time Capsule",
-                description: "Write letters to themselves, delivered later for self-reflection.📜",
-                imagePath: "lib/assets/images/tiny.png",
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => TimeCapsule()));
+                }, 
+                child: Features2(
+                  title: "Time Capsule",
+                  description: "Write letters to themselves, delivered later for self-reflection.📜",
+                  imagePath: "lib/assets/images/tiny.png",
+                ),
               ),
               
               SizedBox(height: 15),

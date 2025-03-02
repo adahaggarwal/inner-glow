@@ -333,13 +333,7 @@ Widget _buildCalendarSection() {
         _assignNewTask();
       }
 
-      // Trigger plant growth animation
-      showPlantGrowthAnimation = true;
-      Future.delayed(const Duration(seconds: 2), () {
-        setState(() {
-          showPlantGrowthAnimation = false;
-        });
-      });
+      
 
       // Play confetti animation
       _confettiController.play();
