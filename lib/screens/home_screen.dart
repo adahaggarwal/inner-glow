@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:innerglow/constants/colors.dart';
 import 'package:innerglow/screens/bloombuddy.dart';
 import 'package:innerglow/screens/chatbot/chatbot.dart';
@@ -10,7 +12,39 @@ import 'package:innerglow/widgets/features.dart';
 import 'package:innerglow/widgets/features2.dart';
 import 'package:innerglow/widgets/head_text.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  File? _profileImage;
+  int _selectedIndex = 0; // Track the currently selected tab
+
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  // Handle bottom navigation bar item taps
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    // Navigate to the Chatbot screen when the "Chat" tab is selected
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => Chatbot()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,10 +52,10 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         leading: Padding(
-          padding: EdgeInsets.only(left: 10), // Added space before the logo
+          padding: EdgeInsets.only(left: 10),
           child: Image.asset(
             'lib/assets/images/logo.png',
-            width: 15, // Reduced size
+            width: 15,
             height: 15,
           ),
         ),
@@ -58,33 +92,34 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Headtext(
-                        text: "Good Morning,", 
+                        text: "Good Morning,",
                         color: bg,
                         fontSize: 22,
                       ),
                       Headtext(
-                        text: "Adah", 
+                        text: "Adah",
                         fontWeight: FontWeight.w700,
                         fontSize: 28,
                       ),
                     ],
                   ),
                   Spacer(),
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.grey[200],
-                    child: Icon(
-                      Icons.person,
-                      size: 30,
-                      color: Colors.grey[600],
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!)
+                          : null,
+                      child: _profileImage == null
+                          ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                          : null,
                     ),
                   ),
                 ],
               ),
-              
               SizedBox(height: 30),
-              
-              // Mood section with card
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -116,180 +151,60 @@ class HomeScreen extends StatelessWidget {
                       childAspectRatio: 0.9,
                       crossAxisSpacing: 15,
                       mainAxisSpacing: 15,
-                      
                       children: [
-                        _buildMoodOption(
-                          "lib/assets/images/excited.png", 
-                          "Excited",
-                          context,
-                        ),
-                        _buildMoodOption(
-                          "lib/assets/images/lonely.png", 
-                          "Lonely",
-                          context,
-                        ),
-                        _buildMoodOption(
-                          "lib/assets/images/relaxed.png", 
-                          "Relaxed",
-                          context,
-                        ),
-                        _buildMoodOption(
-                          "lib/assets/images/stressed.png", 
-                          "Stressed",
-                          context,
-                        ),
+                        _buildMoodOption("lib/assets/images/excited.png", "Excited"),
+                        _buildMoodOption("lib/assets/images/lonely.png", "Lonely"),
+                        _buildMoodOption("lib/assets/images/relaxed.png", "Relaxed"),
+                        _buildMoodOption("lib/assets/images/stressed.png", "Stressed"),
                       ],
                     ),
                   ],
                 ),
               ),
-              
               SizedBox(height: 30),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Headtext(
-                    text: "Ready to begin! Explore", 
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      "See All",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+              Headtext(
+                text: "Ready to begin! Explore",
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
               ),
-              
               SizedBox(height: 15),
-              
-              // Features section
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => Chatbot()));
-                },
-                child: Features(
-                  title: "Lumora",
-                  description: "Your emotions, your voice—reflected back to you.",
-                  imagePath: "lib/assets/images/innerecho.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => SleepCrisisScreen()));
-                },
-                child: Features2(
-                  title: "Deep Rest",
-                  description: "Instant support for nightime anxiety and insomnia.🌙",
-                  imagePath: "lib/assets/images/deeprest.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              GestureDetector(   
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => SelfCareTasksScreen()));
-                },             
-                child: Features(
-                  title: "Self-Care tasks",
-                  description: "Small, actionable self-care tasks with rewards.🎯",
-                  imagePath: "lib/assets/images/selfcare.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => BloomBuddy(completedTasks: 0)));
-                },
-                child: Features2(
-                  title: "Bloom Buddy",
-                  description: "Complete your self-care tasks and nurture your plant as it flourishes with you. 🌱",
-                  imagePath: "lib/assets/images/bloombuddy.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => RoomCustomizerScreen()));
-                }, 
-                child: Features(
-                  title: "Safe Haven",
-                  description: "A customizable virtual relaxation room.🏡",
-                  imagePath: "lib/assets/images/safe.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => TimeCapsule()));
-                }, 
-                child: Features2(
-                  title: "Time Capsule",
-                  description: "Write letters to themselves, delivered later for self-reflection.📜",
-                  imagePath: "lib/assets/images/tiny.png",
-                ),
-              ),
-              
-              SizedBox(height: 15),
-              
-              Features(
-                title: "Inner Track",
-                description: "Track progress and mood trends. 📊",
-                imagePath: "lib/assets/images/inner.png",
-              ),
-              
+              _buildFeature("Lumora", "Your emotions, your voice—reflected back to you.", "lib/assets/images/innerecho.png", Chatbot()),
+              SizedBox(height: 10),
+              _buildFeature("Deep Rest", "Instant support for nightime anxiety and insomnia.🌙", "lib/assets/images/deeprest.png", SleepCrisisScreen(), isFeature2: true),
+              SizedBox(height: 10),
+              _buildFeature("Self-Care tasks", "Small, actionable self-care tasks with rewards.🎯", "lib/assets/images/selfcare.png", SelfCareTasksScreen()),
+              SizedBox(height: 10),
+              _buildFeature("Bloom Buddy", "Complete your self-care tasks and nurture your plant. 🌱", "lib/assets/images/bloombuddy.png", BloomBuddy(completedTasks: 0), isFeature2: true),
+              SizedBox(height: 10),
+              _buildFeature("Safe Haven", "A customizable virtual relaxation room.🏡", "lib/assets/images/safe.png", RoomCustomizerScreen()),
+              SizedBox(height: 10),
+              _buildFeature("Time Capsule", "Write letters to yourself, delivered later for self-reflection.📜", "lib/assets/images/tiny.png", TimeCapsule(), isFeature2: true),
+              SizedBox(height: 10),
+              _buildFeature("Inner Track", "Track progress and mood trends. 📊", "lib/assets/images/inner.png", null),
               SizedBox(height: 30),
             ],
           ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: bg,
+        unselectedItemColor: Colors.black.withOpacity(0.4),
         showSelectedLabels: true,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped, // Handle tab selection
         items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.self_improvement),
-            label: 'Wellness',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.house), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.self_improvement), label: 'Wellness'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );
   }
-  
-  Widget _buildMoodOption(String imagePath, String mood, BuildContext context) {
+
+  Widget _buildMoodOption(String imagePath, String mood) {
     return InkWell(
       onTap: () {},
       child: Container(
@@ -303,16 +218,23 @@ class HomeScreen extends StatelessWidget {
           children: [
             Image.asset(imagePath, width: 80),
             SizedBox(height: 10),
-            Text(
-              mood,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
+            Text(mood, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFeature(String title, String description, String imagePath, Widget? screen, {bool isFeature2 = false}) {
+    return GestureDetector(
+      onTap: () {
+        if (screen != null) {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+        }
+      },
+      child: isFeature2
+          ? Features2(title: title, description: description, imagePath: imagePath)
+          : Features(title: title, description: description, imagePath: imagePath),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:innerglow/constants/colors.dart';
 import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart'; // Add this package
@@ -258,7 +259,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Listening... Speak now"),
-            backgroundColor: Colors.purple[400],
+            backgroundColor: bg,
             duration: Duration(seconds: 30),
           ),
         );
@@ -319,7 +320,8 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
     return Scaffold(
       appBar: AppBar(
         title: Text("Lumora", style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.purple[700],
+        backgroundColor: bg,
+        leading: Icon(Icons.arrow_back,color: Colors.white,),
       ),
       body: Container(
         color: Colors.grey[100],
@@ -441,7 +443,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                   SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: _isListening ? Colors.red : Colors.purple[600],
+                      color: _isListening ? Colors.red : bg,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
@@ -452,7 +454,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                   SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.purple[600],
+                      color: bg,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(

@@ -53,21 +53,21 @@ class _RoomCustomizerScreenState extends State<RoomCustomizerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Dream Room Designer',
+          'Your Safe Haven',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: textcol,
           ),
         ),
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.save, color: Colors.white),
+            icon: Icon(Icons.save, color: bg),
             onPressed: _saveRoom,
             tooltip: 'Save Room',
           ),
           IconButton(
-            icon: Icon(Icons.restart_alt, color: Colors.white),
+            icon: Icon(Icons.restart_alt, color: bg),
             onPressed: _resetRoom,
             tooltip: 'Reset Room',
           ),
@@ -79,7 +79,7 @@ class _RoomCustomizerScreenState extends State<RoomCustomizerScreen> {
           Expanded(
             flex: 3,
             child: Container(
-              margin: EdgeInsets.all(16.0),
+              margin: EdgeInsets.all(15.0),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
                 border: Border.all(color: Colors.grey[300]!),
