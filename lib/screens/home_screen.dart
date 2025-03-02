@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:innerglow/constants/colors.dart';
+import 'package:innerglow/screens/bloombuddy.dart';
 import 'package:innerglow/screens/chatbot/chatbot.dart';
 import 'package:innerglow/screens/self_care_tasks_screen.dart';
 import 'package:innerglow/screens/sleep_crisis_mode.dart';
@@ -18,8 +19,8 @@ class HomeScreen extends StatelessWidget {
           padding: EdgeInsets.only(left: 10), // Added space before the logo
           child: Image.asset(
             'lib/assets/images/logo.png',
-            width: 25, // Reduced size
-            height: 25,
+            width: 15, // Reduced size
+            height: 15,
           ),
         ),
         title: Text(
@@ -197,7 +198,8 @@ class HomeScreen extends StatelessWidget {
               GestureDetector(   
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => SelfCareTasksScreen()));
-                },             child: Features(
+                },             
+                child: Features(
                   title: "Self-Care tasks",
                   description: "Small, actionable self-care tasks with rewards.🎯",
                   imagePath: "lib/assets/images/selfcare.png",
@@ -206,10 +208,15 @@ class HomeScreen extends StatelessWidget {
               
               SizedBox(height: 15),
               
-              Features2(
-                title: "Bloom Buddy",
-                description: "Complete your self-care tasks and nurture your plant as it flourishes with you. 🌱",
-                imagePath: "lib/assets/images/bloombuddy.png",
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => BloomBuddy(completedTasks: 0)));
+                },
+                child: Features2(
+                  title: "Bloom Buddy",
+                  description: "Complete your self-care tasks and nurture your plant as it flourishes with you. 🌱",
+                  imagePath: "lib/assets/images/bloombuddy.png",
+                ),
               ),
               
               SizedBox(height: 15),

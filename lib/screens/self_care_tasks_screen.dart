@@ -4,6 +4,7 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:confetti/confetti.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:innerglow/screens/bloombuddy.dart';
 
 class SelfCareTasksScreen extends StatefulWidget {
   @override
@@ -16,28 +17,32 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.week;
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-  
+
   // Track task completion status
   Map<String, bool> _completedTasks = {};
-  
-  // Track missed tasks
   Map<String, bool> _missedTasks = {};
-  
+
   // Current task details
   String currentTaskTitle = "Take 5 deep breaths";
   String currentTaskCategory = "Mindfulness & Relaxation";
   String currentTaskDescription = "Find a quiet space, sit comfortably, and take 5 slow, deep breaths. Focus on your breathing.";
-  
+
   // Progress on the roadmap (0 to 1)
   double progressValue = 0.0;
   int stepsCompleted = 0;
-  int totalSteps = 25;
+  int totalSteps = 20;
   int journeyCount = 1;
   bool showJourneyCompletedDialog = false;
-  
+
+  // Total lifetime completed tasks for BloomBuddy
+  int totalLifetimeCompleted = 0;
+
   // Primary color from hex code 863668
-  final Color primaryColor = Color(0xFF863668);
-  
+  final Color primaryColor = const Color(0xFF863668);
+
+  // Animation controller for plant growth
+  bool showPlantGrowthAnimation = false;
+
   // List of task categories with tasks
   final Map<String, List<String>> taskCategories = {
     "Mindfulness & Relaxation": [
@@ -83,8 +88,8 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: Duration(seconds: 2));
-    _journeyCompletedController = ConfettiController(duration: Duration(seconds: 5));
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _journeyCompletedController = ConfettiController(duration: const Duration(seconds: 5));
     _loadSavedData();
   }
 
@@ -96,48 +101,54 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   // Load saved data from SharedPreferences
   Future<void> _loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     setState(() {
       // Load completed tasks
       final completedTasksJson = prefs.getString('completedTasks');
       if (completedTasksJson != null) {
         _completedTasks = Map<String, bool>.from(jsonDecode(completedTasksJson));
       }
-      
+
       // Load missed tasks
       final missedTasksJson = prefs.getString('missedTasks');
       if (missedTasksJson != null) {
         _missedTasks = Map<String, bool>.from(jsonDecode(missedTasksJson));
       }
-      
+
       // Load progress
       stepsCompleted = prefs.getInt('stepsCompleted') ?? 0;
       journeyCount = prefs.getInt('journeyCount') ?? 1;
       progressValue = stepsCompleted / totalSteps;
-      
+
+      // Load total lifetime completed tasks for BloomBuddy
+      totalLifetimeCompleted = prefs.getInt('totalLifetimeCompleted') ?? 0;
+
       // Load current task
       currentTaskTitle = prefs.getString('currentTaskTitle') ?? currentTaskTitle;
       currentTaskCategory = prefs.getString('currentTaskCategory') ?? currentTaskCategory;
       currentTaskDescription = prefs.getString('currentTaskDescription') ?? currentTaskDescription;
     });
-    
+
     _initializeMissedTasks();
   }
 
   // Save data to SharedPreferences
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Save completed tasks
     await prefs.setString('completedTasks', jsonEncode(_completedTasks));
-    
+
     // Save missed tasks
     await prefs.setString('missedTasks', jsonEncode(_missedTasks));
-    
+
     // Save progress
     await prefs.setInt('stepsCompleted', stepsCompleted);
     await prefs.setInt('journeyCount', journeyCount);
-    
+
+    // Save total lifetime completed tasks for BloomBuddy
+    await prefs.setInt('totalLifetimeCompleted', totalLifetimeCompleted);
+
     // Save current task
     await prefs.setString('currentTaskTitle', currentTaskTitle);
     await prefs.setString('currentTaskCategory', currentTaskCategory);
@@ -147,101 +158,202 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   // Initialize missed tasks for past days
   void _initializeMissedTasks() {
     final today = DateTime.now();
-    
+
     // Check for the last 30 days
     for (int i = 1; i <= 30; i++) {
-      final day = DateTime(today.year, today.month, today.day).subtract(Duration(days: i));
-      final dayKey = _formatDateKey(day);
-      
-      // If there's no completed task for that day, mark it as missed
-      if (_completedTasks[dayKey] == null) {
-        _missedTasks[dayKey] = true;
+      final day = today.subtract(Duration(days: i));
+      final dateKey = _formatDateKey(day);
+
+      if (!_completedTasks.containsKey(dateKey)) {
+        _missedTasks[dateKey] = true;
       }
     }
-    
-    // Save the updated missed tasks
-    _saveData();
   }
 
-  @override
-  void dispose() {
-    _confettiController.dispose();
-    _journeyCompletedController.dispose();
-    super.dispose();
-  }
-
-  void _startNewJourney() {
-    setState(() {
-      // Reset steps but keep history
-      stepsCompleted = 0;
-      progressValue = 0.0;
-      journeyCount++;
-      showJourneyCompletedDialog = false;
-      
-      // Assign a new task
-      _assignNewTask();
-    });
-    
-    // Save the updated data
-    _saveData();
-  }
-
+  // Assign a new task
   void _assignNewTask() {
-    // Assign next task - pick a random category and task
-    final categories = taskCategories.keys.toList();
-    final randomCategory = categories[DateTime.now().millisecond % categories.length];
-    final tasks = taskCategories[randomCategory]!;
-    final randomTask = tasks[DateTime.now().second % tasks.length];
-    
-    currentTaskTitle = randomTask;
-    currentTaskCategory = randomCategory;
-    currentTaskDescription = "Complete this simple self-care activity to advance on your journey.";
-  }
+    final category = taskCategories.keys.toList()[DateTime.now().day % taskCategories.length];
+    final tasks = taskCategories[category]!;
+    final randomIndex = DateTime.now().microsecond % tasks.length;
 
-  void _markTaskComplete() {
+    setState(() {
+      currentTaskTitle = tasks[randomIndex];
+      currentTaskCategory = category;
+      currentTaskDescription = "Complete this task to advance on your self-care journey.";
+    });
+  }
+  // Build calendar section
+Widget _buildCalendarSection() {
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 1,
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    padding: const EdgeInsets.all(15),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Your Calendar",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+        ),
+        const SizedBox(height: 15),
+        TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          selectedDayPredicate: (day) {
+            return isSameDay(_selectedDay, day);
+          },
+          onDaySelected: (selectedDay, focusedDay) {
+            if (!isSameDay(_selectedDay, selectedDay)) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            }
+          },
+          onFormatChanged: (format) {
+            if (_calendarFormat != format) {
+              setState(() {
+                _calendarFormat = format;
+              });
+            }
+          },
+          onPageChanged: (focusedDay) {
+            _focusedDay = focusedDay;
+          },
+          calendarStyle: CalendarStyle(
+            isTodayHighlighted: true,
+            selectedDecoration: BoxDecoration(
+              color: primaryColor,
+              shape: BoxShape.circle,
+            ),
+            todayDecoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            markerDecoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+          ),
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (context, date, events) {
+              final dateKey = _formatDateKey(date);
+              final isCompleted = _completedTasks[dateKey] == true;
+              final isMissed = _missedTasks[dateKey] == true;
+
+              if (isCompleted || isMissed) {
+                return Positioned(
+                  right: 1,
+                  bottom: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted ? Colors.green : Colors.red,
+                    ),
+                    width: 8,
+                    height: 8,
+                  ),
+                );
+              }
+              return null;
+            },
+            defaultBuilder: (context, day, focusedDay) {
+              final dateKey = _formatDateKey(day);
+              final isCompleted = _completedTasks[dateKey] == true;
+              final isMissed = _missedTasks[dateKey] == true;
+
+              if (isCompleted || isMissed) {
+                return Container(
+                  margin: const EdgeInsets.all(6),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isCompleted
+                        ? Colors.green.withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
+                  ),
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      color: isCompleted ? Colors.green[700] : Colors.red[700],
+                    ),
+                  ),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  // Complete a task
+  void _completeTask() {
     final today = _formatDateKey(_selectedDay);
-    
+
     setState(() {
       _completedTasks[today] = true;
-      
-      // Remove from missed tasks if it was there
       _missedTasks.remove(today);
-      
-      // Increment progress
       stepsCompleted++;
+      totalLifetimeCompleted++;
       progressValue = stepsCompleted / totalSteps;
-      
-      // Check if journey is completed
-      if (stepsCompleted >= totalSteps) {
-        // Show journey completed dialog
+
+      if (progressValue >= 1.0) {
         showJourneyCompletedDialog = true;
         _journeyCompletedController.play();
       } else {
-        // Assign next task
         _assignNewTask();
       }
+
+      // Trigger plant growth animation
+      showPlantGrowthAnimation = true;
+      Future.delayed(const Duration(seconds: 2), () {
+        setState(() {
+          showPlantGrowthAnimation = false;
+        });
+      });
+
+      // Play confetti animation
+      _confettiController.play();
     });
-    
-    // Save the updated data
+
     _saveData();
-    
-    // Show confetti effect
-    _confettiController.play();
   }
 
+  // Skip a task
   void _skipTask() {
     final today = _formatDateKey(_selectedDay);
-    
+
     setState(() {
-      // Mark as missed
       _missedTasks[today] = true;
-      
-      // Assign next task
       _assignNewTask();
     });
-    
-    // Save the updated data
+
     _saveData();
+  }
+
+  // Navigate to BloomBuddy screen
+  void _navigateToBloomBuddy() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BloomBuddy(completedTasks: totalLifetimeCompleted),
+      ),
+    );
   }
 
   @override
@@ -253,56 +365,46 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
         backgroundColor: Colors.transparent,
         title: Text(
           "Self-Care Journey ${journeyCount > 1 ? '- #$journeyCount' : ''}",
-          style: TextStyle(
-            color: primaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
+          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 22),
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: primaryColor),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.spa, color: primaryColor),
+            tooltip: 'View your BloomBuddy',
+            onPressed: _navigateToBloomBuddy,
+          ),
+        ],
       ),
       body: Stack(
         children: [
           SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // First time welcome card
                   _buildWelcomeCard(),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Calendar section
+                  const SizedBox(height: 20),
+                  _buildBloomBuddyPreview(),
+                  const SizedBox(height: 20),
                   _buildCalendarSection(),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Calendar legend
+                  const SizedBox(height: 20),
                   _buildCalendarLegend(),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Progress roadmap
+                  const SizedBox(height: 20),
                   _buildRoadmapSection(),
-                  
-                  SizedBox(height: 25),
-                  
-                  // Current task card
+                  const SizedBox(height: 25),
                   _buildCurrentTaskCard(),
-                  
-                  SizedBox(height: 30),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
           ),
-          
-          // Confetti overlay for task completion
+          if (showPlantGrowthAnimation) _buildPlantGrowthAnimation(),
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -313,36 +415,125 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
               emissionFrequency: 0.05,
               numberOfParticles: 20,
               gravity: 0.1,
-              colors: [
-                Colors.red,
-                Colors.green,
-                Colors.yellow,
-                Colors.blue,
-                Colors.pink,
-                Colors.purple,
-              ],
+              colors: [Colors.red, Colors.green, Colors.yellow, Colors.blue, Colors.pink, Colors.purple],
             ),
           ),
-          
-          // Journey completed overlay
-          if (showJourneyCompletedDialog)
-            _buildJourneyCompletedOverlay(),
+          if (showJourneyCompletedDialog) _buildJourneyCompletedOverlay(),
         ],
       ),
     );
   }
 
+  // Build plant growth animation overlay
+  Widget _buildPlantGrowthAnimation() {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedOpacity(
+              opacity: showPlantGrowthAnimation ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 500),
+              child: PlantWidget(completedTasks: totalLifetimeCompleted - 1, size: 200),
+            ),
+            AnimatedOpacity(
+              opacity: showPlantGrowthAnimation ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              child: TweenAnimationBuilder(
+                tween: Tween<double>(begin: 0.8, end: 1.0),
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.elasticOut,
+                builder: (context, double value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: PlantWidget(completedTasks: totalLifetimeCompleted, size: 200),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Plant Growing!",
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build BloomBuddy preview card
+  Widget _buildBloomBuddyPreview() {
+    return InkWell(
+      onTap: _navigateToBloomBuddy,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(15),
+        child: Row(
+          children: [
+            Container(
+              height: 80,
+              width: 80,
+              child: PlantWidget(completedTasks: totalLifetimeCompleted),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Your BloomBuddy",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    "Growth Stage: ${(totalLifetimeCompleted / 20).floor()}",
+                    style: TextStyle(fontSize: 14, color: Colors.green[700], fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    "Total Tasks: $totalLifetimeCompleted",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    "Next growth in ${20 - (totalLifetimeCompleted % 20)} tasks",
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: primaryColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build journey completed overlay
   Widget _buildJourneyCompletedOverlay() {
     return Stack(
       children: [
-        // Semi-transparent backdrop
         Container(
           color: Colors.black.withOpacity(0.7),
           width: double.infinity,
           height: double.infinity,
         ),
-        
-        // Confetti
         Align(
           alignment: Alignment.center,
           child: ConfettiWidget(
@@ -353,24 +544,13 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             emissionFrequency: 0.05,
             numberOfParticles: 50,
             gravity: 0.1,
-            colors: [
-              Colors.red,
-              Colors.green,
-              Colors.yellow,
-              Colors.blue,
-              Colors.pink,
-              Colors.purple,
-              Colors.orange,
-              Colors.teal,
-            ],
+            colors: [Colors.red, Colors.green, Colors.yellow, Colors.blue, Colors.pink, Colors.purple, Colors.orange, Colors.teal],
           ),
         ),
-        
-        // Congratulations dialog
         Center(
           child: Container(
             width: MediaQuery.of(context).size.width * 0.85,
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -385,41 +565,39 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.celebration,
-                  color: primaryColor,
-                  size: 60,
-                ),
-                SizedBox(height: 20),
+                Icon(Icons.celebration, color: primaryColor, size: 60),
+                const SizedBox(height: 20),
                 Text(
                   "Congratulations!",
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
-                  ),
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 24),
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 15),
                 Text(
-                  "You've completed your 25-day self-care journey! Taking small steps each day has made a significant impact on your wellbeing.",
+                  "You've completed your 20-day self-care journey! Taking small steps each day has made a significant impact on your wellbeing.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[800],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                 ),
-                SizedBox(height: 25),
+                const SizedBox(height: 10),
+                Text(
+                  "Your BloomBuddy is growing stronger too!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.green[700], fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 25),
+                Container(
+                  height: 100,
+                  child: PlantWidget(completedTasks: totalLifetimeCompleted),
+                ),
+                const SizedBox(height: 25),
                 ElevatedButton(
                   onPressed: _startNewJourney,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
                   ),
-                  child: Text(
+                  child: const Text(
                     "Start New Journey",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
@@ -432,6 +610,20 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
     );
   }
 
+  // Start a new journey
+  void _startNewJourney() {
+    setState(() {
+      showJourneyCompletedDialog = false;
+      stepsCompleted = 0;
+      progressValue = 0.0;
+      journeyCount++;
+      _assignNewTask();
+    });
+
+    _saveData();
+  }
+
+  // Build welcome card
   Widget _buildWelcomeCard() {
     return Container(
       width: double.infinity,
@@ -443,226 +635,92 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: primaryColor.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.favorite,
-                  color: primaryColor,
-                  size: 24,
-                ),
+                child: Icon(Icons.favorite, color: primaryColor, size: 24),
               ),
-              SizedBox(width: 15),
+              const SizedBox(width: 15),
               Expanded(
                 child: Text(
-                  journeyCount > 1 
-                    ? "Welcome to Journey #$journeyCount!" 
-                    : "Welcome to your Self-Care Journey!",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
+                  journeyCount > 1 ? "Welcome to Journey #$journeyCount!" : "Welcome to your Self-Care Journey!",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 15),
+          const SizedBox(height: 15),
           Text(
-            "Complete one self-care task each day to advance on your journey. Each small step contributes to your overall wellbeing.",
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
+            "Complete one self-care task each day to advance on your journey. Each small step contributes to your overall wellbeing and helps your BloomBuddy grow!",
+            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
           ),
-          SizedBox(height: 15),
-          
+          const SizedBox(height: 15),
         ],
       ),
     );
   }
 
-  Widget _buildCalendarSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Your Calendar",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-            ),
-          ),
-          SizedBox(height: 15),
-          TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            calendarFormat: _calendarFormat,
-            calendarStyle: CalendarStyle(
-              outsideDaysVisible: false,
-              selectedDecoration: BoxDecoration(
-                color: primaryColor,
-                shape: BoxShape.circle,
-              ),
-              todayDecoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-            ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: TextStyle(
-                color: primaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-              leftChevronIcon: Icon(Icons.chevron_left, color: primaryColor),
-              rightChevronIcon: Icon(Icons.chevron_right, color: primaryColor),
-            ),
-            selectedDayPredicate: (day) {
-              return isSameDay(_selectedDay, day);
-            },
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-            },
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, date, events) {
-                final dateKey = _formatDateKey(date);
-                final completed = _completedTasks[dateKey] ?? false;
-                final missed = _missedTasks[dateKey] ?? false;
-                
-                if (!completed && !missed) return null;
-                
-                return Container(
-                  margin: const EdgeInsets.only(top: 20),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: completed ? primaryColor : Colors.red[300],
-                  ),
-                );
-              },
-              // Customize day cells
-              defaultBuilder: (context, day, focusedDay) {
-                final dateKey = _formatDateKey(day);
-                final completed = _completedTasks[dateKey] ?? false;
-                final missed = _missedTasks[dateKey] ?? false;
-                
-                if (completed) {
-                  return Container(
-                    margin: const EdgeInsets.all(4.0),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primaryColor, width: 1),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${day.day}',
-                        style: TextStyle(color: primaryColor),
-                      ),
-                    ),
-                  );
-                } else if (missed) {
-                  return Container(
-                    margin: const EdgeInsets.all(4.0),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.red[300]!, width: 1),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${day.day}',
-                        style: TextStyle(color: Colors.red[300]),
-                      ),
-                    ),
-                  );
-                }
-                
-                return null;
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  
+  // Build calendar legend
   Widget _buildCalendarLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: primaryColor,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.green.withOpacity(0.2),
+                border: Border.all(color: Colors.green, width: 2),
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              "Completed",
+              style: TextStyle(color: Colors.grey[700], fontSize: 12),
+            ),
+          ],
         ),
-        SizedBox(width: 5),
-        Text(
-          "Completed",
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 12,
-          ),
-        ),
-        SizedBox(width: 20),
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.red[300],
-          ),
-        ),
-        SizedBox(width: 5),
-        Text(
-          "Missed",
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 12,
-          ),
+        const SizedBox(width: 20),
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(0.2),
+                border: Border.all(color: Colors.red, width: 2),
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              "Missed",
+              style: TextStyle(color: Colors.grey[700], fontSize: 12),
+            ),
+          ],
         ),
       ],
     );
   }
 
+  // Build roadmap section
   Widget _buildRoadmapSection() {
     return Container(
       decoration: BoxDecoration(
@@ -673,11 +731,73 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 10,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: EdgeInsets.all(15),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Your Progress",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+          ),
+          const SizedBox(height: 15),
+          LinearPercentIndicator(
+            lineHeight: 18.0,
+            percent: progressValue,
+            padding: const EdgeInsets.symmetric(horizontal: 0),
+            animation: true,
+            animationDuration: 1000,
+            backgroundColor: Colors.grey[200],
+            progressColor: primaryColor,
+            barRadius: const Radius.circular(10),
+            center: Text(
+              "${(progressValue * 100).toStringAsFixed(0)}%",
+              style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "$stepsCompleted / $totalSteps Tasks Completed",
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+              Text(
+                "${totalSteps - stepsCompleted} more to go",
+                style: TextStyle(fontSize: 14, color: primaryColor, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build current task card
+  Widget _buildCurrentTaskCard() {
+    final isToday = isSameDay(_selectedDay, DateTime.now());
+    final dateKey = _formatDateKey(_selectedDay);
+    final isCompleted = _completedTasks[dateKey] == true;
+    final isMissed = _missedTasks[dateKey] == true;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -685,140 +805,302 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Your Progress",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
+                isToday ? "Today's Task" : "Task for ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
               ),
-              if (journeyCount > 1)
-                Text(
-                  "Journey #$journeyCount",
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isCompleted
+                      ? Colors.green.withOpacity(0.2)
+                      : isMissed
+                          ? Colors.red.withOpacity(0.2)
+                          : Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isCompleted ? "Completed" : isMissed ? "Missed" : "Pending",
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: primaryColor.withOpacity(0.7),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isCompleted
+                        ? Colors.green[700]
+                        : isMissed
+                            ? Colors.red[700]
+                            : Colors.blue[700],
                   ),
                 ),
+              ),
             ],
           ),
-          SizedBox(height: 15),
-          LinearPercentIndicator(
-            percent: progressValue,
-            lineHeight: 14.0,
-            barRadius: Radius.circular(7),
-            progressColor: primaryColor,
-            backgroundColor: primaryColor.withOpacity(0.2),
-            animation: true,
-            animationDuration: 1000,
-            padding: EdgeInsets.zero,
-          ),
-          SizedBox(height: 10),
-          Center(
+          const SizedBox(height: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Text(
-              "$stepsCompleted of $totalSteps steps completed",
+              currentTaskCategory,
               style: TextStyle(
-                fontWeight: FontWeight.w500,
+                fontSize: 12,
                 color: primaryColor,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
+          const SizedBox(height: 15),
+          Text(
+            currentTaskTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            currentTaskDescription,
+            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+          ),
+          const SizedBox(height: 25),
+          if (isToday && !isCompleted && !isMissed)
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _completeTask,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text("Mark as Complete"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: _skipTask,
+                  icon: const Icon(Icons.skip_next),
+                  label: const Text("Skip"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                    side: BorderSide(color: Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildCurrentTaskCard() {
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    _journeyCompletedController.dispose();
+    super.dispose();
+  }
+}
+
+// Plant widget based on completed tasks
+class PlantWidget extends StatelessWidget {
+  final int completedTasks;
+  final double size;
+
+  const PlantWidget({
+    Key? key,
+    required this.completedTasks,
+    this.size = 80,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate growth stage (0 to 4)
+    final stage = (completedTasks / 20).floor();
+    
+    // Calculate the growth percentage within the current stage (0 to 1)
+    final growthInStage = (completedTasks % 20) / 20;
+
     return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [primaryColor.withOpacity(0.9), primaryColor],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: Offset(0, 3),
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Pot
+          Container(
+            width: size * 0.8,
+            height: size * 0.4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFBC8F6A),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(size * 0.05),
+                topRight: Radius.circular(size * 0.05),
+                bottomLeft: Radius.circular(size * 0.25),
+                bottomRight: Radius.circular(size * 0.25),
+              ),
+            ),
           ),
+          
+          // Soil
+          Positioned(
+            bottom: size * 0.25,
+            child: Container(
+              width: size * 0.7,
+              height: size * 0.1,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5D4037),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(size * 0.05),
+                  topRight: Radius.circular(size * 0.05),
+                ),
+              ),
+            ),
+          ),
+          
+          // Plant based on stage
+          if (stage >= 0) 
+            _buildPlantStage(stage, growthInStage),
         ],
       ),
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              currentTaskCategory,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+    );
+  }
+
+  Widget _buildPlantStage(int stage, double growthInStage) {
+    switch (stage) {
+      case 0:
+        // Seedling
+        return Positioned(
+          bottom: size * 0.35,
+          child: Container(
+            width: size * 0.1,
+            height: size * 0.2 * (0.2 + growthInStage * 0.8),
+            decoration: const BoxDecoration(
+              color: Color(0xFF4CAF50),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(10),
+                topRight: Radius.circular(5),
               ),
             ),
           ),
-          SizedBox(height: 15),
-          Text(
-            currentTaskTitle,
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-            ),
-          ),
-          SizedBox(height: 10),
-          Text(
-            currentTaskDescription,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
-          ),
-          SizedBox(height: 25),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        );
+      case 1:
+        // Small plant
+        return Positioned(
+          bottom: size * 0.35,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              OutlinedButton(
-                onPressed: _skipTask,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.white),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: Text(
-                  "Skip Today",
-                  style: TextStyle(color: Colors.white),
+              Container(
+                width: size * 0.6 * growthInStage,
+                height: size * 0.15,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
+                  shape: BoxShape.circle,
                 ),
               ),
-              ElevatedButton(
-                onPressed: _markTaskComplete,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+              Container(
+                width: size * 0.1,
+                height: size * 0.25,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    topRight: Radius.circular(2),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                child: Text(
-                  "Mark Complete",
-                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-        ],
-      ),
-    );
+        );
+      case 2:
+        // Medium plant
+        return Positioned(
+          bottom: size * 0.35,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: size * 0.7 * growthInStage,
+                height: size * 0.3 * growthInStage,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Container(
+                width: size * 0.12,
+                height: size * 0.3,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF7CB342),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(3),
+                    topRight: Radius.circular(3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      default:
+        // Full bloom
+        return Positioned(
+          bottom: size * 0.35,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: size * 0.3,
+                    height: size * 0.3,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4CAF50),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Container(
+                    width: size * 0.35,
+                    height: size * 0.35,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF66BB6A),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.3),
+                          blurRadius: 5,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: size * 0.3,
+                    height: size * 0.3,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4CAF50),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                width: size * 0.14,
+                height: size * 0.35,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF7CB342),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(5),
+                    topRight: Radius.circular(5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
   }
 }
