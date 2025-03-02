@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:innerglow/constants/colors.dart';
 import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:permission_handler/permission_handler.dart'; // Add this package
+import 'package:permission_handler/permission_handler.dart';
 
 class Chatbot extends StatefulWidget {
   @override
@@ -13,12 +13,63 @@ class Chatbot extends StatefulWidget {
 class _ChatbotState extends State<Chatbot> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = []; // Changed to dynamic to store mood
   final String apiKey = "AIzaSyA7qiMEe7_1nvs3JOi0UxhUJ5--fS8ZlSY"; // 🔑 Replace with your Gemini API key
   bool _isLoading = false;
   late stt.SpeechToText _speech;
   bool _isListening = false;
   bool _speechInitialized = false;
+  
+  // Mood color mapping
+  final Map<String, Map<String, Color>> _moodColors = {
+    'neutral': {
+      'userBubble': Colors.purple[400]!,
+      'userText': Colors.white,
+      'botBubble': Colors.purple[100]!,
+      'botText': Colors.black87,
+      'indicator': Colors.purple[300]!,
+    },
+    'happy': {
+      'userBubble': Colors.green[400]!,
+      'userText': Colors.white,
+      'botBubble': Colors.green[100]!,
+      'botText': Colors.black87,
+      'indicator': Colors.green[300]!,
+    },
+    'sad': {
+      'userBubble': Colors.blue[400]!,
+      'userText': Colors.white,
+      'botBubble': Colors.blue[100]!,
+      'botText': Colors.black87,
+      'indicator': Colors.blue[300]!,
+    },
+    'angry': {
+      'userBubble': Colors.red[400]!,
+      'userText': Colors.white,
+      'botBubble': Colors.red[100]!,
+      'botText': Colors.black87,
+      'indicator': Colors.red[300]!,
+    },
+    'anxious': {
+      'userBubble': Colors.orange[400]!,
+      'userText': Colors.white,
+      'botBubble': Colors.orange[100]!,
+      'botText': Colors.black87,
+      'indicator': Colors.orange[300]!,
+    },
+  };
+  
+  // Current user mood - default to neutral
+  String _currentMood = 'neutral';
+
+  // Mood emoji mapping
+  final Map<String, String> _moodEmojis = {
+    'neutral': '😐',
+    'happy': '😊',
+    'sad': '😢',
+    'angry': '😡',
+    'anxious': '😰',
+  };
 
   @override
   void initState() {
@@ -32,7 +83,8 @@ class _ChatbotState extends State<Chatbot> {
     setState(() {
       _messages.add({
         "role": "bot",
-        "text": "Hello, I'm Lumora. I'm here to provide a listening ear. How are you feeling today?"
+        "text": "Hello, I'm Lumora. I'm here to provide a listening ear. How are you feeling today?",
+        "mood": "neutral"
       });
     });
   }
@@ -44,7 +96,8 @@ class _ChatbotState extends State<Chatbot> {
       _messages.add({
         "role": "bot",
         "text": "Voice input isn't available because microphone permission was denied. "
-            "You can enable it in your device settings under App Permissions."
+            "You can enable it in your device settings under App Permissions.",
+        "mood": "neutral"
       });
     });
     
@@ -80,7 +133,8 @@ class _ChatbotState extends State<Chatbot> {
           setState(() {
             _messages.add({
               "role": "bot",
-              "text": "Voice input is not available on this device. Please type your messages instead."
+              "text": "Voice input is not available on this device. Please type your messages instead.",
+              "mood": "neutral"
             });
           });
         }
@@ -90,7 +144,8 @@ class _ChatbotState extends State<Chatbot> {
         setState(() {
           _messages.add({
             "role": "bot",
-            "text": "I need microphone permission to use voice input. Please enable it in your device settings."
+            "text": "I need microphone permission to use voice input. Please enable it in your device settings.",
+            "mood": "neutral"
           });
         });
       }
@@ -111,11 +166,64 @@ class _ChatbotState extends State<Chatbot> {
     });
   }
 
+  // Detect mood from text content
+  String _detectMood(String message) {
+    message = message.toLowerCase();
+    
+    // Simple keyword-based mood detection
+    if (message.contains('happy') || 
+        message.contains('joy') || 
+        message.contains('great') || 
+        message.contains('excited') ||
+        message.contains('glad') ||
+        message.contains('wonderful')) {
+      return 'happy';
+    } else if (message.contains('sad') || 
+               message.contains('depressed') || 
+               message.contains('unhappy') || 
+               message.contains('down') ||
+               message.contains('miserable') ||
+               message.contains('crying')) {
+      return 'sad';
+    } else if (message.contains('angry') || 
+               message.contains('furious') || 
+               message.contains('mad') ||
+               message.contains('hate') ||
+               message.contains('annoyed') ||
+               message.contains('upset')) {
+      return 'angry';
+    } else if (message.contains('anxious') || 
+               message.contains('worried') || 
+               message.contains('nervous') ||
+               message.contains('stress') ||
+               message.contains('panicked') ||
+               message.contains('scared')) {
+      return 'anxious';
+    }
+    
+    return _currentMood; // Keep current mood if no keywords detected
+  }
+
+  // Get formatted mood name for display
+  String _getMoodDisplayName(String mood) {
+    switch(mood) {
+      case 'happy': return 'Happy';
+      case 'sad': return 'Sad';
+      case 'angry': return 'Angry';
+      case 'anxious': return 'Anxious';
+      case 'neutral': return 'Neutral';
+      default: return 'Neutral';
+    }
+  }
+
   Future<void> sendMessage(String message) async {
     if (message.isEmpty) return;
 
+    // Detect mood from message
+    String detectedMood = _detectMood(message);
     setState(() {
-      _messages.add({"role": "user", "text": message});
+      _currentMood = detectedMood;
+      _messages.add({"role": "user", "text": message, "mood": detectedMood});
       _isLoading = true;
     });
 
@@ -142,14 +250,14 @@ class _ChatbotState extends State<Chatbot> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
-         if (responseData.containsKey("candidates") && responseData["candidates"].isNotEmpty) {
+        if (responseData.containsKey("candidates") && responseData["candidates"].isNotEmpty) {
           String botReply = responseData["candidates"][0]["content"]["parts"][0]["text"] ?? "I'm here to support you.";
 
           // Sanitize the bot's response
           botReply = _sanitizeResponse(botReply);
 
           setState(() {
-            _messages.add({"role": "bot", "text": botReply});
+            _messages.add({"role": "bot", "text": botReply, "mood": _currentMood});
             _isLoading = false;
           });
         } else {
@@ -157,7 +265,8 @@ class _ChatbotState extends State<Chatbot> {
             _messages.add({
               "role": "bot",
               "text":
-                  "I'm having trouble processing your message right now. Could we try a different approach to this conversation?"
+                  "I'm having trouble processing your message right now. Could we try a different approach to this conversation?",
+              "mood": _currentMood
             });
             _isLoading = false;
           });
@@ -169,7 +278,8 @@ class _ChatbotState extends State<Chatbot> {
           _messages.add({
             "role": "bot",
             "text":
-                "I'm sorry, I'm having some technical difficulties at the moment. Let's try again in a moment."
+                "I'm sorry, I'm having some technical difficulties at the moment. Let's try again in a moment.",
+            "mood": _currentMood
           });
           _isLoading = false;
         });
@@ -181,7 +291,8 @@ class _ChatbotState extends State<Chatbot> {
         _messages.add({
           "role": "bot",
           "text":
-              "I apologize for the interruption. It seems we're having connection issues. Please try again when you're ready."
+              "I apologize for the interruption. It seems we're having connection issues. Please try again when you're ready.",
+          "mood": _currentMood
         });
         _isLoading = false;
       });
@@ -242,7 +353,8 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
         setState(() {
           _messages.add({
             "role": "bot",
-            "text": "Voice input isn't available right now. Please check your microphone permissions and try again."
+            "text": "Voice input isn't available right now. Please check your microphone permissions and try again.",
+            "mood": _currentMood
           });
         });
         return;
@@ -309,10 +421,32 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
     }
   }
-  //remove **
+
+  // Remove **
   String _sanitizeResponse(String text) {
     // Remove '**' and any other unwanted patterns
     return text.replaceAll('**', '');
+  }
+
+  // Get color based on mood
+  Color _getUserBubbleColor(String mood) {
+    return _moodColors[mood]?['userBubble'] ?? _moodColors['neutral']!['userBubble']!;
+  }
+  
+  Color _getUserTextColor(String mood) {
+    return _moodColors[mood]?['userText'] ?? _moodColors['neutral']!['userText']!;
+  }
+  
+  Color _getBotBubbleColor(String mood) {
+    return _moodColors[mood]?['botBubble'] ?? _moodColors['neutral']!['botBubble']!;
+  }
+  
+  Color _getBotTextColor(String mood) {
+    return _moodColors[mood]?['botText'] ?? _moodColors['neutral']!['botText']!;
+  }
+  
+  Color _getMoodIndicatorColor(String mood) {
+    return _moodColors[mood]?['indicator'] ?? _moodColors['neutral']!['indicator']!;
   }
 
   @override
@@ -321,12 +455,45 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
       appBar: AppBar(
         title: Text("Lumora", style: TextStyle(color: Colors.white)),
         backgroundColor: bg,
-        leading: Icon(Icons.arrow_back,color: Colors.white,),
+        leading: Icon(Icons.arrow_back, color: Colors.white),
       ),
       body: Container(
         color: Colors.grey[100],
         child: Column(
           children: [
+            // Mood indicator bar
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              decoration: BoxDecoration(
+                color: _getMoodIndicatorColor(_currentMood).withOpacity(0.3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    spreadRadius: 1,
+                    blurRadius: 2,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "${_moodEmojis[_currentMood] ?? '😐'} ",
+                    style: TextStyle(fontSize: 24),
+                  ),
+                  Text(
+                    "Current Mood: ${_getMoodDisplayName(_currentMood)}",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _getMoodIndicatorColor(_currentMood).withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
@@ -340,7 +507,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                         margin: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                         padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.purple[100],
+                          color: _getBotBubbleColor(_currentMood),
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Row(
@@ -349,12 +516,12 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                             SizedBox(
                               width: 80,
                               child: LinearProgressIndicator(
-                                backgroundColor: Colors.purple[200],
-                                valueColor: AlwaysStoppedAnimation(Colors.purple[800]!),
+                                backgroundColor: _getBotBubbleColor(_currentMood).withOpacity(0.5),
+                                valueColor: AlwaysStoppedAnimation(_getBotTextColor(_currentMood)),
                               ),
                             ),
                             SizedBox(width: 10),
-                            Text("Thinking...", style: TextStyle(color: Colors.purple[800])),
+                            Text("Thinking...", style: TextStyle(color: _getBotTextColor(_currentMood))),
                           ],
                         ),
                       ),
@@ -363,6 +530,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
 
                   final message = _messages[index];
                   final isUser = message["role"] == "user";
+                  final messageMood = message["mood"] ?? 'neutral';
 
                   return Align(
                     alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -382,7 +550,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                           margin: EdgeInsets.symmetric(vertical: 4, horizontal: 10),
                           padding: EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: isUser ? Colors.purple[400] : Colors.purple[100],
+                            color: isUser ? _getUserBubbleColor(messageMood) : _getBotBubbleColor(messageMood),
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
@@ -397,7 +565,7 @@ Respond as Lumora in a compassionate, helpful, and concise manner. Focus on emot
                             message["text"]!,
                             style: TextStyle(
                               fontSize: 16,
-                              color: isUser ? Colors.white : Colors.black87,
+                              color: isUser ? _getUserTextColor(messageMood) : _getBotTextColor(messageMood),
                             ),
                           ),
                         ),
