@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:innerglow/constants/colors.dart';
 import 'package:innerglow/screens/bloombuddy.dart';
 import 'package:innerglow/screens/chatbot/chatbot.dart';
+import 'package:innerglow/screens/customisable_room.dart';
 import 'package:innerglow/screens/self_care_tasks_screen.dart';
 import 'package:innerglow/screens/sleep_crisis_mode.dart';
 import 'package:innerglow/screens/time_capsule.dart';
@@ -222,10 +223,15 @@ class HomeScreen extends StatelessWidget {
               
               SizedBox(height: 15),
               
-              Features(
-                title: "Safe Haven",
-                description: "A customizable virtual relaxation room.🏡",
-                imagePath: "lib/assets/images/safe.png",
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => RoomCustomizerScreen()));
+                }, 
+                child: Features(
+                  title: "Safe Haven",
+                  description: "A customizable virtual relaxation room.🏡",
+                  imagePath: "lib/assets/images/safe.png",
+                ),
               ),
               
               SizedBox(height: 15),

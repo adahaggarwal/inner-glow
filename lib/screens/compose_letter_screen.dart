@@ -75,7 +75,13 @@ class _ComposeLetterScreenState extends State<ComposeLetterScreen> {
                   actions: [
                     TextButton(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>Futureletters()));
+                        // First close the dialog
+                        Navigator.of(context).pop();
+                        // Then return to the previous screen with the letter data
+                        Navigator.of(context).pop({
+                          'title': _titleController.text,
+                          'date': _selectedDate,
+                        });
                       },
                       child: const Text("OK", style: TextStyle(color: Color(0xFF863668))),
                     ),
