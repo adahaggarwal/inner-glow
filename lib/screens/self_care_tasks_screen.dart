@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:innerglow/constants/colors.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:confetti/confetti.dart';
@@ -19,7 +20,7 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
   DateTime _selectedDay = DateTime.now();
 
   // Track task completion status
-  Map<String, bool> _completedTasks = {};
+  Map<String, List<String>> _completedTasks = {};
   Map<String, bool> _missedTasks = {};
 
   // Current task details
@@ -98,7 +99,6 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
     return "${date.year}-${date.month}-${date.day}";
   }
 
-  // Load saved data from SharedPreferences
   Future<void> _loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -106,7 +106,17 @@ class _SelfCareTasksScreenState extends State<SelfCareTasksScreen> {
       // Load completed tasks
       final completedTasksJson = prefs.getString('completedTasks');
       if (completedTasksJson != null) {
-        _completedTasks = Map<String, bool>.from(jsonDecode(completedTasksJson));
+        Map<String, dynamic> rawCompletedTasks = jsonDecode(completedTasksJson);
+        _completedTasks = rawCompletedTasks.map((key, value) {
+          // Ensure the value is converted to a List<String>
+          if (value is List) {
+            return MapEntry(key, List<String>.from(value));
+          } else if (value is bool && value) {
+            // Handle legacy data (Map<String, bool>)
+            return MapEntry(key, ["default_task"]);
+          }
+          return MapEntry(key, []);
+        });
       }
 
       // Load missed tasks
@@ -250,7 +260,7 @@ Widget _buildCalendarSection() {
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               final dateKey = _formatDateKey(date);
-              final isCompleted = _completedTasks[dateKey] == true;
+              final isCompleted = _completedTasks.containsKey(dateKey) && _completedTasks[dateKey]!.isNotEmpty;
               final isMissed = _missedTasks[dateKey] == true;
 
               if (isCompleted || isMissed) {
@@ -271,7 +281,7 @@ Widget _buildCalendarSection() {
             },
             defaultBuilder: (context, day, focusedDay) {
               final dateKey = _formatDateKey(day);
-              final isCompleted = _completedTasks[dateKey] == true;
+              final isCompleted = _completedTasks.containsKey(dateKey) && _completedTasks[dateKey]!.isNotEmpty;
               final isMissed = _missedTasks[dateKey] == true;
 
               if (isCompleted || isMissed) {
@@ -301,13 +311,17 @@ Widget _buildCalendarSection() {
   );
 }
 
-  // Complete a task
   void _completeTask() {
     final today = _formatDateKey(_selectedDay);
 
     setState(() {
-      _completedTasks[today] = true;
-      _missedTasks.remove(today);
+      // Add the current task to the list of completed tasks for today
+      if (!_completedTasks.containsKey(today)) {
+        _completedTasks[today] = [];
+      }
+      _completedTasks[today]!.add(currentTaskTitle);
+
+      // Increment counters
       stepsCompleted++;
       totalLifetimeCompleted++;
       progressValue = stepsCompleted / totalSteps;
@@ -334,17 +348,21 @@ Widget _buildCalendarSection() {
     _saveData();
   }
 
-  // Skip a task
+  //skip task
   void _skipTask() {
-    final today = _formatDateKey(_selectedDay);
+  final today = _formatDateKey(_selectedDay);
 
-    setState(() {
+  setState(() {
+    // Mark the day as missed only if no tasks have been completed today
+    if (!_completedTasks.containsKey(today) || _completedTasks[today]!.isEmpty) {
       _missedTasks[today] = true;
-      _assignNewTask();
-    });
+    }
 
-    _saveData();
-  }
+    _assignNewTask();
+  });
+
+  _saveData();
+}
 
   // Navigate to BloomBuddy screen
   void _navigateToBloomBuddy() {
@@ -779,122 +797,125 @@ Widget _buildCalendarSection() {
 
   // Build current task card
   Widget _buildCurrentTaskCard() {
-    final isToday = isSameDay(_selectedDay, DateTime.now());
-    final dateKey = _formatDateKey(_selectedDay);
-    final isCompleted = _completedTasks[dateKey] == true;
-    final isMissed = _missedTasks[dateKey] == true;
+  final isToday = isSameDay(_selectedDay, DateTime.now());
+  final dateKey = _formatDateKey(_selectedDay);
+  final isCompleted = _completedTasks[dateKey] == true;
+  final isMissed = _missedTasks[dateKey] == true;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isToday ? "Today's Task" : "Task for ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+  return Container(
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          spreadRadius: 1,
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isToday ? "Today's Task" : "Task for ${_selectedDay.day}/${_selectedDay.month}/${_selectedDay.year}",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? Colors.green.withOpacity(0.3)
+                    : isMissed
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.amber.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(20),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
+              child: Text(
+                isCompleted ? "Completed" : isMissed ? "Missed" : "Pending",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                   color: isCompleted
-                      ? Colors.green.withOpacity(0.2)
+                      ? Colors.green[400]
                       : isMissed
-                          ? Colors.red.withOpacity(0.2)
-                          : Colors.blue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                          ? Colors.red[400]
+                          : Colors.amber[400],
                 ),
-                child: Text(
-                  isCompleted ? "Completed" : isMissed ? "Missed" : "Pending",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isCompleted
-                        ? Colors.green[700]
-                        : isMissed
-                            ? Colors.red[700]
-                            : Colors.blue[700],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            currentTaskCategory,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
+        Text(
+          currentTaskTitle,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          currentTaskDescription,
+          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7)),
+        ),
+        const SizedBox(height: 25),
+        if (isToday && !isCompleted && !isMissed)
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _completeTask,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text("Mark as Complete"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: bg,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)
+                      ),
+                    
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: _skipTask,
+                icon: const Icon(Icons.skip_next),
+                label: const Text("Skip"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              currentTaskCategory,
-              style: TextStyle(
-                fontSize: 12,
-                color: primaryColor,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            currentTaskTitle,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            currentTaskDescription,
-            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 25),
-          if (isToday && !isCompleted && !isMissed)
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _completeTask,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text("Mark as Complete"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                OutlinedButton.icon(
-                  onPressed: _skipTask,
-                  icon: const Icon(Icons.skip_next),
-                  label: const Text("Skip"),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey[700],
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   @override
   void dispose() {

@@ -48,15 +48,17 @@ class _BloomBuddyState extends State<BloomBuddy> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final int growthStage = (widget.completedTasks / 25).floor();
+    final int growthStage = (widget.completedTasks / 20).floor();
     // Calculate next growth threshold
-    final int nextGrowthAt = (growthStage + 1) * 25;
+    final int nextGrowthAt = (growthStage + 1) * 20;
     // Tasks remaining for next stage
     final int tasksRemaining = nextGrowthAt - widget.completedTasks;
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bloom Buddy'),
+        centerTitle: true,
+        title: const Text('Bloom Buddy', style: TextStyle(color: Colors.white),),
+        leading: Icon(Icons.arrow_back, color: Colors.white,),
         backgroundColor: Color(0xFF863668),
       ),
       body: Container(
@@ -178,7 +180,7 @@ class PlantWidget extends StatelessWidget {
   const PlantWidget({
     Key? key,
     required this.completedTasks,
-    this.size = 180,
+    this.size = 250,
   }) : super(key: key);
 
   @override
