@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   File? _profileImage;
   int _selectedIndex = 0; // Track the currently selected tab
+  String? _selectedMood; // Track the selected mood
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -162,6 +163,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               SizedBox(height: 30),
+              if (_selectedMood != null)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    "You're feeling $_selectedMood today. Let's work on that!",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: bg,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              SizedBox(height: 20),
+
               Headtext(
                 text: "Ready to begin! Explore",
                 fontSize: 20,
@@ -206,12 +222,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMoodOption(String imagePath, String mood) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        setState(() {
+          _selectedMood = mood;
+        });
+      },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _selectedMood == mood ? bg.withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          border: Border.all(
+            color: _selectedMood == mood ? bg : Colors.grey.withOpacity(0.2),
+            width: _selectedMood == mood ? 2 : 1,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

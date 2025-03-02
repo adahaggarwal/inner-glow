@@ -23,16 +23,16 @@ class _SleepCrisisScreenState extends State<SleepCrisisScreen> with SingleTicker
     "Calm": MoodMusic(
       tracks: [
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-          title: "Gentle Piano",
+          url: "https://www.bensound.com/bensound-music/bensound-slowmotion.mp3",
+          title: "Slow Motion",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
-          title: "Ocean Waves",
+          url: "https://www.bensound.com/bensound-music/bensound-relaxing.mp3",
+          title: "Relaxing",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3",
-          title: "Night Forest",
+          url: "https://www.bensound.com/bensound-music/bensound-tenderness.mp3",
+          title: "Tenderness",
         ),
       ],
       color: Color(0xFF4A78E6),
@@ -42,16 +42,16 @@ class _SleepCrisisScreenState extends State<SleepCrisisScreen> with SingleTicker
     "Anxious": MoodMusic(
       tracks: [
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-          title: "Ambient Flow",
+          url: "https://www.bensound.com/bensound-music/bensound-slowmotion.mp3",
+          title: "Soft Rain",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-          title: "Deep Breathing",
+          url: "https://www.bensound.com/bensound-music/bensound-creativeminds.mp3",
+          title: "Deep Focus",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3",
-          title: "Calm Meditation",
+          url: "https://www.bensound.com/bensound-music/bensound-dreams.mp3",
+          title: "Tranquil Mind",
         ),
       ],
       color: Color(0xFF8E74BF),
@@ -99,16 +99,16 @@ class _SleepCrisisScreenState extends State<SleepCrisisScreen> with SingleTicker
     "Lonely": MoodMusic(
       tracks: [
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-          title: "Warm Soundscape",
+          url: "https://www.bensound.com/bensound-music/bensound-goinghigher.mp3",
+          title: "Going Higher",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3",
-          title: "Celestial Tones",
+          url: "https://www.bensound.com/bensound-music/bensound-tenderness.mp3",
+          title: "Tenderness",
         ),
         Track(
-          url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3",
-          title: "Companionship",
+          url: "https://www.bensound.com/bensound-music/bensound-slowmotion.mp3",
+          title: "Slow Motion",
         ),
       ],
       color: Color(0xFFE67C4A),
