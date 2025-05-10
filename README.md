@@ -45,22 +45,7 @@
   <p><b>Backend</b>: Firebase (for real-time data storage and synchronization)</p>
 </div>
 
-## Development Roadmap
 
-<details>
-  <summary><b>🔄 Current Stage</b></summary>
-  <p>Using **Google Gemini AI** to power chatbot and core features.</p>
-</details>
-
-<details>
-  <summary><b>🚀 Next Steps (With Funding)</b></summary>
-  <p>Developing a **custom AI model** tailored for emotional intelligence and mental health.</p>
-</details>
-
-<details>
-  <summary><b>🌍 Future Goals</b></summary>
-  <p>Expand to include **voice-based interactions**, **multi-language support**, and **integration with wearables** for mood tracking.</p>
-</details>
 
 ## Installation
 
