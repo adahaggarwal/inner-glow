@@ -1,23 +1,40 @@
 # <p align="center">InnerGlow</p>
 
-<div align="center">
-  <img src="https://example.com/logo.png" alt="InnerGlow Logo" width="200"/>
-</div>
-
 **InnerGlow** is an AI-powered mental health support chatbot designed to offer personalized emotional well-being support. Built using **Flutter** for cross-platform support, **InnerGlow** provides users with 24/7 emotional companionship and innovative features that address mental health concerns.
+
+<img width="248" alt="Ellipse 7" src="https://github.com/user-attachments/assets/41ac9fe9-7c6c-4bf2-8478-05bccc723e4f" />
 
 ## Features
 
-<div style="background-color:#f3f4f6;padding:15px;border-radius:10px;margin-bottom:20px;">
-  <ul style="list-style-type:none;">
-    <li>🌙 <b>Sleep Crisis Mode</b>: Offers real-time support for anxiety and stress during nighttime, helping users through sleepless nights.</li>
-    <li>🧸 <b>Digital Comfort Object</b>: An evolving AI companion that learns and grows emotionally with each interaction.</li>
-    <li>🌌 <b>AI Dream Therapist</b>: Interprets and analyzes emotional patterns in dreams, providing mindful insights.</li>
-    <li>✉️ <b>AI "Future You" Letters</b>: Helps users write uplifting letters to their future selves, reflecting their growth and emotional journey.</li>
-    <li>🧘 <b>Customizable Safe Haven</b>: A virtual space for emotional decompression, tailored to each user's preferences.</li>
-    <li>🌟 <b>Lumora</b>: An emotional wellness guide that integrates all features into a holistic support system.</li>
-  </ul>
-</div>
+<details>
+  <summary><b>🌙 Sleep Crisis Mode</b></summary>
+  <p>Offers real-time support for anxiety and stress during nighttime, helping users through sleepless nights.</p>
+</details>
+
+<details>
+  <summary><b>🧸 Digital Comfort Object</b></summary>
+  <p>An evolving AI companion that learns and grows emotionally with each interaction.</p>
+</details>
+
+<details>
+  <summary><b>🌌 AI Dream Therapist</b></summary>
+  <p>Interprets and analyzes emotional patterns in dreams, providing mindful insights.</p>
+</details>
+
+<details>
+  <summary><b>✉️ AI "Future You" Letters</b></summary>
+  <p>Helps users write uplifting letters to their future selves, reflecting their growth and emotional journey.</p>
+</details>
+
+<details>
+  <summary><b>🧘 Customizable Safe Haven</b></summary>
+  <p>A virtual space for emotional decompression, tailored to each user's preferences.</p>
+</details>
+
+<details>
+  <summary><b>🌟 Lumora</b></summary>
+  <p>An emotional wellness guide that integrates all features into a holistic support system.</p>
+</details>
 
 ## Tech Stack
 
@@ -29,14 +46,20 @@
 
 ## Development Roadmap
 
-### 🔄 Current Stage:
-- Using **Google Gemini AI** to power chatbot and core features.
+<details>
+  <summary><b>🔄 Current Stage</b></summary>
+  <p>Using **Google Gemini AI** to power chatbot and core features.</p>
+</details>
 
-### 🚀 Next Steps (With Funding):
-- Developing a **custom AI model** tailored for emotional intelligence and mental health.
+<details>
+  <summary><b>🚀 Next Steps (With Funding)</b></summary>
+  <p>Developing a **custom AI model** tailored for emotional intelligence and mental health.</p>
+</details>
 
-### 🌍 Future Goals:
-- Expand to include **voice-based interactions**, **multi-language support**, and **integration with wearables** for mood tracking.
+<details>
+  <summary><b>🌍 Future Goals</b></summary>
+  <p>Expand to include **voice-based interactions**, **multi-language support**, and **integration with wearables** for mood tracking.</p>
+</details>
 
 ## Installation
 
