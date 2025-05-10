@@ -1,8 +1,9 @@
 # <p align="center">InnerGlow</p>
+<img width="80" alt="Ellipse 7" src="https://github.com/user-attachments/assets/41ac9fe9-7c6c-4bf2-8478-05bccc723e4f" />
+
 
 **InnerGlow** is an AI-powered mental health support chatbot designed to offer personalized emotional well-being support. Built using **Flutter** for cross-platform support, **InnerGlow** provides users with 24/7 emotional companionship and innovative features that address mental health concerns.
 
-<img width="248" alt="Ellipse 7" src="https://github.com/user-attachments/assets/41ac9fe9-7c6c-4bf2-8478-05bccc723e4f" />
 
 ## Features
 
